@@ -30,7 +30,7 @@ PC物理キーボードでのプレイを推奨します。
 X キーで結果をXに投稿できます。
 
 ### 作者
-TK Lab. [](https://x.com/TK_Lab_)
+TK Lab. [@TK_Lab_](https://x.com/TK_Lab_)
 
 初版公開: 2026年1月16日  
 Version: 1.0.0

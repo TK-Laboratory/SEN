@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- 
   閃ｰセンｰ (SEN)
-  Version: 1.0.0 (初版公開日: 2026-01-16)
+  Version: 1.0.1 (更新日: 2026-01-17)
   Author: TK Lab. (https://x.com/TK_Lab_)
   Description: 表示された一文字を打つだけのタイピングゲーム。
   License: このコードは個人利用・改変・再配布自由ですが、商用利用はご遠慮ください。
@@ -10,6 +10,15 @@
     - Mersenne Twister実装: 公開ドメインの標準実装を参考・改変
     - Font: Google Fonts (JetBrains Mono, Noto Sans JP)
   注意: PC物理キーボードでのプレイを推奨。モバイル・仮想キーボードでは動作保証外。
+
+  ChangeLog:
+    - 2026-01-16 (v1.0.0)
+      ・初版公開
+    - 2026-01-17 (v1.0.1)
+      ・ゲーム開始時のカウントダウン（3→2→1）後、最初の出題文字が「1」の場合にわかりにくい問題を修正
+      ・ハイフン（-）とアンダースコア（_）の視認性が低い問題を改善
+      ・一部のブラウザでプレイ中に「/」キーを押した際にブラウザの検索窓（クイック検索）が開いてしまうなど問題を修正
+      ・一部のブラウザでレイアウトが崩れる問題を修正
 -->
 <html lang="ja">
 <head>
@@ -170,6 +179,7 @@
          font-size: 160px;
          font-weight: bold;
          height: 180px;
+         width: 180px;
          margin: 20px 0 10px 0;
          color: #333;
          text-align: center;
@@ -177,6 +187,7 @@
          align-items: center;
          justify-content: center;
          line-height: 180px;
+         box-sizing: border-box;
       }
       #message {
          font-size: 36px;
@@ -428,6 +439,7 @@
          color: #333;
          text-align: center;
          line-height: 1.0;
+         gap: 4px;
       }
       .key.hidden {
          color: #f0f0f0;
@@ -435,17 +447,6 @@
       .key[data-type="function"] {
          background: #e0e0e0;
          color: #333;
-      }
-      .key .shift-symbol {
-         font-size: 11px;
-         display: block;
-         margin-bottom: -4px;
-         color: inherit;
-      }
-      .key .base-symbol {
-         font-size: 11px;
-         display: block;
-         color: inherit;
       }
       .key.tab { width: 56px; }
       .key.backspace { width: 76px; }
@@ -490,10 +491,21 @@
          margin-top: -5px;
          box-shadow: 0 4px 4px rgba(0,0,0,0.1) !important;
       }
+      .key .shift-symbol,
+      .key .base-symbol {
+         font-size: 11px;
+         margin: 0;
+         line-height: 1;
+         display: block;
+         text-align: center;
+      }
       .key.katakana .shift-symbol,
       .key.katakana .base-symbol {
-         font-size: 9px !important;
-         line-height: 1.2;
+         font-size: 9px;
+         margin: 0;
+         line-height: 1;
+         display: block;
+         text-align: center;
       }
       .correct-key {
          color: white !important;
@@ -678,7 +690,8 @@
          <span class="key space" data-type="function">Space</span>
          <span class="key henkan" data-type="function">変換</span>
          <span class="key katakana" data-type="function">
-            <span class="shift-symbol">カタカナ</span><br><span class="base-symbol">ひらがな</span>
+            <span class="shift-symbol">カタカナ</span>
+            <span class="base-symbol">ひらがな</span>
          </span>
          <span class="key alt" data-type="function">Alt</span>
          <span class="key app" data-type="function">App</span>
@@ -1331,7 +1344,10 @@
                const key = findKeyByBaseChar(baseChar);
                if (key) {
                   const shiftChar = getShiftCharFromBase(baseChar);
-                  key.innerHTML = `<span class="shift-symbol">${shiftChar}</span><br><span class="base-symbol">${key.dataset.originalText}</span>`;
+                  key.innerHTML = `
+                     <span class="shift-symbol">${shiftChar}</span>
+                     <span class="base-symbol">${key.dataset.originalText}</span>
+                  `;
                   key.dataset.shiftChar = shiftChar;
                   key.classList.remove('hidden');
                }
@@ -1499,6 +1515,15 @@
          }
       }
 
+      function setTargetBox(enabled) {
+         if (enabled) {
+            targetEl.style.width = '0 180px';
+            targetEl.style.backgroundColor = '#ffffff';
+         } else {
+            targetEl.style.width = '';
+            targetEl.style.backgroundColor = '';
+         }
+      }
       function getRank(reactionTime) {
          if (reactionTime <= 0.25) return 'S';
          else if (reactionTime <= 0.3) return 'A';
@@ -1590,30 +1615,48 @@
       }
 
       function startCountdown() {
-         gameState = 'countdown';
-         let count = 3;
-         messageEl.textContent = 'Ready...';
-         targetEl.textContent = count;
-         targetEl.style.color = '#333';
-         countdownInterval = setInterval(() => {
-            count--;
-            if (count > 0) {
-               targetEl.textContent = count;
-            } else {
-               clearInterval(countdownInterval);
-               targetEl.style.color = '#333';
-               gameState = 'playing';
-               timeLeft = selectedTime;
-               timerDisplay.textContent = timeLeft;
-               showNewChar();
-               messageEl.textContent = 'Go!';
-               setTimeout(() => {
-                  if (gameState !== 'playing') return;
-                  messageEl.textContent = '';
-               }, 1000);
-               startTimer();
-            }
-         }, 1000);
+            gameState = 'countdown';
+            setTargetBox(true);
+            
+            targetEl.textContent = '';
+            targetEl.style.color = '#333';
+
+            messageEl.textContent = 'Ready?';
+            messageEl.style.color = '#333';
+
+            setTimeout(() => {
+                  let count = 3;
+
+                  messageEl.textContent = count;
+
+                  countdownInterval = setInterval(() => {
+                        count--;
+
+                        if (count > 0) {
+                              messageEl.textContent = count;
+                        } else {
+                              clearInterval(countdownInterval);
+
+                              gameState = 'playing';
+
+                              showNewChar();
+
+                              messageEl.textContent = 'Go!';
+                              messageEl.style.color = '#333';
+
+                              timeLeft = selectedTime;
+                              timerDisplay.textContent = timeLeft;
+
+                              setTimeout(() => {
+                                    if (gameState !== 'playing') return;
+                                    messageEl.textContent = '';
+                                    messageEl.style.color = '#333';
+                              }, 1000);
+
+                              startTimer();
+                        }
+                  }, 1000);
+            }, 1000);
       }
 
       function startTimer() {
@@ -1623,6 +1666,7 @@
             if (timeLeft <= 0) {
                clearInterval(timerId);
                gameState = 'timeup';
+               setTargetBox(false);
                targetEl.textContent = '終';
                targetEl.style.color = '#333';
                messageEl.textContent = 'Time Up!';
@@ -1638,6 +1682,8 @@
          selectedDifficulty = difficultyOptions[currentItemIndex[1]];
          selectedLayout = layoutOptions[currentItemIndex[2]];
          timeLeft = selectedTime;
+         timerDisplay.textContent = timeLeft;
+         timerDisplay.style.display = 'block';
          updateCharSet(selectedDifficulty);
          correctCount = 0;
          missCount = 0;
@@ -1649,7 +1695,6 @@
          scoreSpan.textContent = 0;
          timerDisplay.style.display = 'block';
          targetEl.style.display = 'block';
-         messageEl.textContent = 'ｰセンｰ';
          messageEl.style.height = '60px';
          messageEl.style.margin = '0 0 30px 0';
          clearInterval(timerId);
@@ -1671,6 +1716,7 @@
          clearInterval(timerId);
          clearInterval(countdownInterval);
          gameState = 'ended';
+         setTargetBox(false);
          timerDisplay.style.display = 'none';
          targetEl.style.display = 'none';
          messageEl.textContent = '';
@@ -1696,8 +1742,7 @@
             `総合ランク：${finalRank}\n` +
             `「${rankMessage}」\n` +
             `平均反応時間：${avgTime.toFixed(2)}秒\n` +
-            `正解：${correctCount}回　ミス：${missCount}回\n` +
-            `https://tk-laboratory.github.io/SEN/\n` +
+            `正解：${correctCount}回　ミス：${missCount}回\n\n` +
             `#閃ｰセンｰ`;
 
          window.currentTweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
@@ -1733,6 +1778,7 @@
          clearInterval(timerId);
          clearInterval(countdownInterval);
          gameState = 'ready';
+         setTargetBox(false);
          resultEl.style.display = 'none';
          modeSelectArea.style.display = 'flex';
          statsEl.style.display = 'none';
@@ -1912,6 +1958,8 @@
          }
          if (gameState !== 'playing') return;
 
+         e.preventDefault();
+
          if (e.key.length > 1) {
             return;
          }
@@ -1980,7 +2028,4 @@
       updateSelection();
    </script>
 </body>
-
 </html>
-
-

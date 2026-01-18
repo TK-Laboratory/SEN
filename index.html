@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- 
   閃ｰセンｰ (SEN)
-  Version: 1.0.1 (更新日: 2026-01-17)
+  Version: 1.1.0 (更新日: 2026-01-18)
   Author: TK Lab. (https://x.com/TK_Lab_)
   Description: 表示された一文字を打つだけのタイピングゲーム。
   License: このコードは個人利用・改変・再配布自由ですが、商用利用はご遠慮ください。
@@ -19,6 +19,8 @@
       ・ハイフン（-）とアンダースコア（_）の視認性が低い問題を改善
       ・一部のブラウザでプレイ中に「/」キーを押した際にブラウザの検索窓（クイック検索）が開いてしまうなどの問題を修正
       ・一部のブラウザでレイアウトが崩れる問題を修正
+    - 2026-01-18 (v1.1.0)
+      ・ランキングシステムを実装
 -->
 <html lang="ja">
 <head>
@@ -37,7 +39,7 @@
          min-height: 100vh;
          margin: 0;
          padding-top: 20px;
-         padding-bottom: 180px;
+         padding-bottom: 20px;
          background-color: #f0f0f0;
          user-select: none;
          box-sizing: border-box;
@@ -564,6 +566,65 @@
       .toggle-btn.active:hover {
          background: #fff;
       }
+
+      #ranking-content h2 { font-size: 32px; margin-bottom: 20px; }
+      /* メインコンテンツの下マージンをゼロに（隙間なくフッターに接続） */
+      #jis-keyboard-guide,
+      #us-keyboard-guide,
+      #detail-container {
+         margin-bottom: 0 !important;
+      }
+
+      /* フッターをコンテナ影の上に重ね（背景透明） */
+      footer {
+         margin-top: -60px;  /* 負の値でコンテナの上に重ね（影がかぶる量を調整、-20px~-60pxで試してください） */
+         padding-top: 60px;  /* 重ね分を補正して文字位置を下に */
+         padding-bottom: 40px;
+         background: transparent;  /* 背景透明！影が透ける */
+         width: fit-content;
+         margin-left: auto;
+         margin-right: auto;
+         pointer-events: none;  /* 影部分をクリック可能に（文字部分は後で修正） */
+      }
+
+      /* フッター内部コンテンツ（クリック可能 + 文字読みやすく） */
+      footer > div {
+         width: fit-content;
+         min-width: 596px;  /* あなたのいい感じの596px固定 */
+         max-width: 596px;
+         margin-left: auto;
+         margin-right: auto;
+         text-align: center;
+         background: rgba(240, 240, 240, 0);
+         padding: 10px 20px;
+         border-radius: 8px;
+         pointer-events: auto;  /* 文字部分だけクリック可能 */
+         color: #333;  /* 文字色を濃く（影の上でも見やすく） */
+      }
+
+      footer .policy-content {
+         text-align: left;
+         width: 100%;
+         max-width: 596px;
+         margin-left: auto;
+         margin-right: auto;
+         transition: all 0.3s ease;
+         word-wrap: break-word;
+         background: transparent;  /* 本文背景透明（薄い背景はタイトルだけでもOK） */
+      }
+
+      /* モバイル対応 */
+      @media (max-width: 768px) {
+         footer {
+            margin-top: -20px;
+            padding-top: 40px;
+         }
+         footer > div {
+            min-width: auto;
+            max-width: 100%;
+            padding: 10px;
+         }
+      }
    </style>
    <link rel="preconnect" href="https://fonts.googleapis.com">
    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -779,6 +840,7 @@
          <button id="btn-graph" class="toggle-btn active">グラフ表示 (G)</button>
          <button id="btn-table" class="toggle-btn">ログ表示 (D)</button>
          <button id="btn-stats" class="toggle-btn">統計表示 (S)</button>
+         <button id="btn-ranking" class="toggle-btn">ランキング (R)</button>
       </div>
       <div id="detail-container">
          <div id="detail-graph">
@@ -787,6 +849,9 @@
          <div id="detail-table-container"></div>
          <div id="detail-stats" style="display: none;">
             <div id="detail-stats-content" style="width: fit-content; margin: auto auto;"></div>
+         </div>
+         <div id="detail-ranking" style="display: none;">
+            <div id="ranking-content"></div>
          </div>
       </div>
    </div>
@@ -1174,34 +1239,106 @@
          document.getElementById('btn-graph').classList.toggle('active', currentDetailMode === 'graph');
          document.getElementById('btn-table').classList.toggle('active', currentDetailMode === 'table');
          document.getElementById('btn-stats').classList.toggle('active', currentDetailMode === 'stats');
+         document.getElementById('btn-ranking').classList.toggle('active', currentDetailMode === 'ranking');
       }
 
       function showStats() {
          document.getElementById('detail-graph').style.display = 'none';
          document.getElementById('detail-table-container').style.display = 'none';
          document.getElementById('detail-stats').style.display = 'block';
+         document.getElementById('detail-ranking').style.display = 'none';
          createStatsDisplay();
          resetDetailContainerWidth();
          currentDetailMode = 'stats';
          updateActiveButtons();
+         updateFooterVisibility();
       }
 
       function showTable() {
          document.getElementById('detail-graph').style.display = 'none';
          document.getElementById('detail-table-container').style.display = 'block';
          document.getElementById('detail-stats').style.display = 'none';
+         document.getElementById('detail-ranking').style.display = 'none';
          resetDetailContainerWidth();
          currentDetailMode = 'table';
          updateActiveButtons();
+         updateFooterVisibility();
       }
 
       function showGraph() {
          document.getElementById('detail-graph').style.display = 'block';
          document.getElementById('detail-table-container').style.display = 'none';
          document.getElementById('detail-stats').style.display = 'none';
+         document.getElementById('detail-ranking').style.display = 'none';
          drawVerticalBarGraph();
          currentDetailMode = 'graph';
          updateActiveButtons();
+         updateFooterVisibility();
+      }
+
+      function showRanking() {
+         document.getElementById('detail-graph').style.display = 'none';
+         document.getElementById('detail-table-container').style.display = 'none';
+         document.getElementById('detail-stats').style.display = 'none';
+         document.getElementById('detail-ranking').style.display = 'block';
+
+         const rankingContent = document.getElementById('ranking-content');
+         if (rankingContent.innerHTML === '' || rankingContent.innerHTML.includes('読み込み中')) {
+            rankingContent.innerHTML = '<p>読み込み中...</p>';
+
+            (async () => {
+               const allScores = await loadRanking();
+
+               const currentModePrefix = `${selectedTime}秒 ${selectedDifficulty}`;
+               const filteredScores = allScores.filter(s => s.mode && s.mode.startsWith(currentModePrefix));
+
+               const top10 = filteredScores
+                  .sort((a, b) => b.score - a.score)
+                  .slice(0, 10);
+
+               let html = `<h2>ランキング（${selectedTime}秒 ${selectedDifficulty} 上位10位）</h2>`;
+               html += '<table style="width: fit-content; margin: 20px auto; border-collapse: collapse; font-size: 18px;">';
+               html += '<thead>';
+               html += '<tr style="background-color: #f2f2f2;">';
+               html += '<th style="padding: 10px 20px; text-align: center;">順位</th>';
+               html += '<th style="padding: 10px 20px; text-align: left;">名前</th>';
+               html += '<th style="padding: 10px 20px; text-align: right;">スコア</th>';
+               html += '<th style="padding: 10px 20px; text-align: center;">ランク</th>';
+               html += '<th style="padding: 10px 20px; text-align: center;">レイアウト</th>';
+               html += '<th style="padding: 10px 20px; text-align: center;">登録日</th>';
+               html += '</tr>';
+               html += '</thead>';
+               html += '<tbody>';
+
+               if (top10.length === 0) {
+                  html += '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #666;">まだ登録がありません</td></tr>';
+               } else {
+                  top10.forEach((s, index) => {
+                     const layout = s.mode.split(' ').pop();
+                     const rankColor = getGreenColor(s.rank || 'F');
+                     const registerDate = new Date(s.timestamp).toLocaleDateString('ja-JP');
+                     html += '<tr>';
+                     html += `<td style="padding: 10px 20px; text-align: center;">${index + 1}位</td>`;
+                     html += `<td style="padding: 10px 20px; text-align: left;">${s.name}</td>`;
+                     html += `<td style="padding: 10px 20px; text-align: right;">${s.score}点</td>`;
+                     html += `<td style="padding: 10px 20px; text-align: center; color: ${rankColor}; font-weight: bold;">${s.rank || '-'}</td>`;
+                     html += `<td style="padding: 10px 20px; text-align: center;">${layout}</td>`;
+                     html += `<td style="padding: 10px 20px; text-align: center;">${registerDate}</td>`;
+                     html += '</tr>';
+                  });
+               }
+
+               html += '</tbody>';
+               html += '</table>';
+
+               rankingContent.innerHTML = html;
+            })();
+         }
+
+         resetDetailContainerWidth();
+         currentDetailMode = 'ranking';
+         updateActiveButtons();
+         updateFooterVisibility();
       }
 
       const mt = new MersenneTwister();
@@ -1616,6 +1753,7 @@
 
       function startCountdown() {
             gameState = 'countdown';
+            updateFooterVisibility();
             setTargetBox(true);
             
             targetEl.textContent = '';
@@ -1638,6 +1776,7 @@
                               clearInterval(countdownInterval);
 
                               gameState = 'playing';
+                              updateFooterVisibility();
 
                               showNewChar();
 
@@ -1712,10 +1851,11 @@
          startCountdown();
       }
 
-      function endGame() {
+      async function endGame() {
          clearInterval(timerId);
          clearInterval(countdownInterval);
          gameState = 'ended';
+         updateFooterVisibility();
          setTargetBox(false);
          timerDisplay.style.display = 'none';
          targetEl.style.display = 'none';
@@ -1773,12 +1913,25 @@
          document.getElementById('detail-toggle').style.display = 'flex';
          showGraph();
          clearHighlights();
+
+         let name = prompt("ランキング登録名（20文字以内・キャンセルで登録なし）", "Anonymous");
+         if (name) {
+            name = name.trim();
+            if (name === "") {
+               name = "Anonymous";
+            }
+            name = name.substring(0, 20);
+            const mode = `${selectedTime}秒 ${selectedDifficulty} ${selectedLayout}`;
+            await saveScore(name, score, mode, finalRank);
+         }
+         document.getElementById('ranking-content').innerHTML = '';
       }
 
       function resetToInitial() {
          clearInterval(timerId);
          clearInterval(countdownInterval);
          gameState = 'ready';
+         updateFooterVisibility();
          setTargetBox(false);
          resultEl.style.display = 'none';
          modeSelectArea.style.display = 'flex';
@@ -1804,6 +1957,46 @@
          clearHighlights();
          document.body.classList.remove('result-mode');
          updateSelection();
+      }
+
+      function syncFooterWidth() {
+         const footerDiv = document.querySelector('footer > div');
+         const policyContent = document.querySelector('.policy-content');
+         if (gameState === 'ready') {
+            footerDiv.style.width = '596px';
+            footerDiv.style.maxWidth = '596px';
+            footerDiv.style.minWidth = '596px';
+            if (policyContent) {
+               policyContent.style.width = '596px';
+               policyContent.style.maxWidth = '596px';
+               policyContent.style.minWidth = '596px';
+            }
+         } else if (gameState === 'ended' && currentDetailMode === 'ranking') {
+            footerDiv.style.width = '668px';
+            footerDiv.style.maxWidth = '668px';
+            footerDiv.style.minWidth = '668px';
+            if (policyContent) {
+               policyContent.style.width = '668px';
+               policyContent.style.maxWidth = '668px';
+               policyContent.style.minWidth = '668px';
+            }
+         }
+      }
+
+      function updateFooterVisibility() {
+         const footer = document.querySelector('footer');
+         let showFooter = false;
+         if (gameState === 'ready') {
+            showFooter = true;
+         }
+         if (gameState === 'ended' && currentDetailMode === 'ranking') {
+            showFooter = true;
+         }
+
+         footer.style.display = showFooter ? 'block' : 'none';
+         if (showFooter) {
+            syncFooterWidth();
+         }
       }
 
       document.querySelectorAll('.dropdown-item').forEach(item => {
@@ -1882,6 +2075,17 @@
       });
 
       document.addEventListener('keydown', (e) => {
+
+      if (e.key.toUpperCase() === 'P') {
+         if (gameState !== 'playing') {
+            const policy = document.querySelector('.policy-content');
+               if (policy) {
+                  policy.style.display = (policy.style.display === 'none' || policy.style.display === '') ? 'block' : 'none';
+                  }
+                  return;
+               }
+            }
+            
          if (e.key === 'Escape') {
             if (gameState !== 'ready') {
                resetToInitial();
@@ -1928,6 +2132,10 @@
             }
             if (e.key.toUpperCase() === 'S') {
                showStats();
+               return;
+            }
+            if (e.key.toUpperCase() === 'R') {
+               showRanking();
                return;
             }
             if (e.key.toUpperCase() === 'X') {
@@ -2025,9 +2233,109 @@
       document.getElementById('btn-graph').addEventListener('click', showGraph);
       document.getElementById('btn-table').addEventListener('click', showTable);
       document.getElementById('btn-stats').addEventListener('click', showStats);
-
+      document.getElementById('btn-ranking').addEventListener('click', showRanking);
       updateSelection();
    </script>
+
+   <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+      import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+      import { getDatabase, ref, set, get, query, orderByChild, limitToFirst } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyAyyyQ0D0Lc2zfIRUm97Ztwz1gfbxeVP50",
+        authDomain: "sen-ranking.firebaseapp.com",
+        databaseURL: "https://sen-ranking-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "sen-ranking",
+        storageBucket: "sen-ranking.firebasestorage.app",
+        messagingSenderId: "537304153403",
+        appId: "1:537304153403:web:7af22994739095fd02cb1e"
+      };
+
+      console.log("Firebase初期化開始");
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getDatabase(app);
+
+      signInAnonymously(auth)
+        .then(() => console.log("匿名認証成功"))
+        .catch(err => console.error("匿名認証失敗:", err));
+
+      window.saveScore = async function(name, score, mode, rank) {
+         try {
+            const uid = auth.currentUser ? auth.currentUser.uid : 'guest_' + Date.now();
+
+            const sanitizedMode = mode.replace(/[.$#[\]/]/g, '_');
+            const sanitizedUid = uid.replace(/[.$#[\]/]/g, '_');
+
+            const userRef = ref(db, `scores/${sanitizedMode}/${sanitizedUid}`);
+
+            const snapshot = await get(userRef);
+            if (snapshot.exists()) {
+               const existing = snapshot.val();
+               if (score <= existing.score) {
+                  console.log("既存スコアの方が高いか同等なので更新せず（自分の記録）");
+                  return;
+               } else {
+                  console.log("最高スコア更新！（自分の記録）");
+               }
+            }
+
+            await set(userRef, {
+               name: name,
+               score: score,
+               mode: mode,
+               rank: rank,
+               timestamp: Date.now(),
+               uid: uid
+            });
+            console.log("スコア保存/更新成功:", { name, score, mode, rank });
+         } catch (err) {
+            console.error("スコア保存失敗:", err);
+         }
+      };
+
+      window.loadRanking = async function() {
+         try {
+            const scoresRef = ref(db, 'scores');
+            const snapshot = await get(scoresRef);
+            if (snapshot.exists()) {
+               const data = [];
+               snapshot.forEach(modeSnapshot => {
+                  modeSnapshot.forEach(userSnapshot => {
+                     data.push(userSnapshot.val());
+                  });
+               });
+               console.log("全ランキング取得成功:", data.length + "件");
+               return data;
+            } else {
+               console.log("ランキングデータなし");
+               return [];
+            }
+         } catch (err) {
+            console.error("ランキング取得失敗:", err);
+            return [];
+         }
+      };
+   </script>
+   <footer>
+      <div>
+         <div style="cursor: pointer; font-size: 16px; text-align: left; color: #666" onclick="this.parentNode.parentNode.querySelector('.policy-content').style.display = (this.parentNode.parentNode.querySelector('.policy-content').style.display === 'none' || this.parentNode.parentNode.querySelector('.policy-content').style.display === '') ? 'block' : 'none';">
+            Privacy Policy (P)
+         </div>
+         <div class="policy-content" style="display: none; margin-top: 20px; text-align: left; color: #666; line-height: 1.6;">
+            <p>本ゲーム「閃ｰセンｰ」は、匿名でプレイ可能です。<br>
+            ランキング登録時はブラウザ固有の匿名ID（個人を特定できない一時的なID）を使用し、メールアドレスや個人情報は一切収集しません。<br>
+            登録データ（表示名・スコア・モード・ランク・登録日時）はランキング表示のみに使用し、第三者に提供することはありません。<br>
+            データはFirebase（Google LLC）で管理されており、Googleのプライバシーポリシーが適用されます。<br>
+            ブラウザのキャッシュクリア等で匿名IDが変わる場合、過去記録が引き継がれない可能性があります。</p>
+            <p>ゲームプレイのスクリーンショット、記録画像、プレイ動画のSNS投稿・アップロード・配信は自由です！<br>
+            ぜひシェアして楽しんでください（#閃ｰセンｰ などハッシュタグも歓迎です）。</p>
+            <p>制作者: TK Lab. (https://x.com/TK_Lab_)<br>
+            ご質問・ご要望はXのDMやリプライまでお気軽にどうぞ！</p>
+         </div>
+      </div>
+   </footer>
 </body>
 </html>
 

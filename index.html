@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- 
   閃ｰセンｰ (SEN)
-  Version: 1.1.1 (更新日: 2026-01-18)
+  Version: 1.1.2 (更新日: 2026-01-19)
   Author: TK Lab. (https://x.com/TK_Lab_)
   Description: 表示された一文字を打つだけのタイピングゲーム。
   License: このコードは個人利用・改変・再配布自由ですが、商用利用はご遠慮ください。
@@ -23,6 +23,8 @@
       ・ランキングシステムを実装
     - 2026-01-18 (v1.1.1)
       ・一部の評価メッセージを変更
+    - 2026-01-19 (v1.1.2)
+      ・ランキング登録のダイアログを、記録が更新されたときだけ出すように変更
 -->
 <html lang="ja">
 <head>
@@ -1916,16 +1918,49 @@
          showGraph();
          clearHighlights();
 
-         let name = prompt("ランキング登録名（20文字以内・キャンセルで登録なし）", "Anonymous");
-         if (name) {
-            name = name.trim();
-            if (name === "") {
-               name = "Anonymous";
+         let isNewRecord = false;
+         let existingScore = null;
+
+         try {
+            const uid = window.firebase.auth.currentUser ? window.firebase.auth.currentUser.uid : 'guest_' + Date.now();
+            const sanitizedMode = `${selectedTime}秒 ${selectedDifficulty} ${selectedLayout}`.replace(/[.$#[\]/]/g, '_');
+            const sanitizedUid = uid.replace(/[.$#[\]/]/g, '_');
+            
+            const userRef = window.firebase.ref(window.firebase.db, `scores/${sanitizedMode}/${sanitizedUid}`);
+
+            const snapshot = await window.firebase.get(userRef);
+            if (snapshot.exists()) {
+               existingScore = snapshot.val().score;
+               if (score > existingScore) {
+                  isNewRecord = true;
+               }
+            } else {
+               isNewRecord = true;
             }
-            name = name.substring(0, 20);
-            const mode = `${selectedTime}秒 ${selectedDifficulty} ${selectedLayout}`;
-            await saveScore(name, score, mode, finalRank);
+         } catch (err) {
+            console.error("既存スコア取得失敗:", err);
+            isNewRecord = true;
          }
+
+         let registeredName = null;
+
+         if (isNewRecord) {
+            const promptMessage = existingScore === null 
+               ? "新記録樹立！\nランキング登録名（20文字以内・キャンセルで登録なし）"
+               : `新記録樹立！（従来:${existingScore}点 → ${score}点）\nランキング登録名（20文字以内・キャンセルで登録なし）`;
+
+            let name = prompt(promptMessage, "Anonymous");
+            if (name !== null) {
+               name = name.trim();
+               if (name === "") name = "Anonymous";
+               name = name.substring(0, 20);
+
+               const mode = `${selectedTime}秒 ${selectedDifficulty} ${selectedLayout}`;
+               await saveScore(name, score, mode, finalRank);
+               registeredName = name;
+            }
+         }
+
          document.getElementById('ranking-content').innerHTML = '';
       }
 
@@ -2257,7 +2292,15 @@
       console.log("Firebase初期化開始");
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
+      window.auth = auth;
       const db = getDatabase(app);
+
+      window.firebase = {
+         auth: auth,
+         db: db,
+         ref: ref,
+         get: get
+      };
 
       signInAnonymously(auth)
         .then(() => console.log("匿名認証成功"))
@@ -2339,8 +2382,6 @@
    </footer>
 </body>
 </html>
-
-
 
 
 

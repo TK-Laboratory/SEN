@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- 
   閃ｰセンｰ (SEN)
-  Version: 1.1.2 (更新日: 2026-01-19)
+  Version: 1.1.3 (更新日: 2026-01-20)
   Author: TK Lab. (https://x.com/TK_Lab_)
   Description: 表示された一文字を打つだけのタイピングゲーム。
   License: このコードは個人利用・改変・再配布自由ですが、商用利用はご遠慮ください。
@@ -25,6 +25,8 @@
       ・一部の評価メッセージを変更
     - 2026-01-19 (v1.1.2)
       ・ランキング登録のダイアログを、記録が更新されたときだけ出すように変更
+    - 2026-01-20 (v1.1.3)
+      ・スクロールバーの挙動を安定化
 -->
 <html lang="ja">
 <head>
@@ -34,6 +36,13 @@
    <style>
       * {
          font-family: "JetBrains Mono", "Noto Sans JP", sans-serif !important;
+      }
+      html {
+         margin: 0;
+         padding: 0;
+         height: 100%;
+         overflow-y: scroll;
+         scrollbar-gutter: stable;
       }
       body {
          display: flex;
@@ -2382,7 +2391,3 @@
    </footer>
 </body>
 </html>
-
-
-
-

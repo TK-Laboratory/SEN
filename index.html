@@ -27,6 +27,8 @@
       ・ランキング登録のダイアログを、記録が更新されたときだけ出すように変更
     - 2026-01-20 (v1.1.3)
       ・スクロールバーの挙動を安定化
+    - 2026-01-25 (v1.2.0)
+      ・全てのランキング表示を実装
 -->
 <html lang="ja">
 <head>
@@ -581,29 +583,26 @@
       }
 
       #ranking-content h2 { font-size: 32px; margin-bottom: 20px; }
-      /* メインコンテンツの下マージンをゼロに（隙間なくフッターに接続） */
       #jis-keyboard-guide,
       #us-keyboard-guide,
       #detail-container {
          margin-bottom: 0 !important;
       }
 
-      /* フッターをコンテナ影の上に重ね（背景透明） */
       footer {
-         margin-top: -60px;  /* 負の値でコンテナの上に重ね（影がかぶる量を調整、-20px~-60pxで試してください） */
-         padding-top: 60px;  /* 重ね分を補正して文字位置を下に */
+         margin-top: -60px;
+         padding-top: 60px;
          padding-bottom: 40px;
-         background: transparent;  /* 背景透明！影が透ける */
+         background: transparent;
          width: fit-content;
          margin-left: auto;
          margin-right: auto;
-         pointer-events: none;  /* 影部分をクリック可能に（文字部分は後で修正） */
+         pointer-events: none;
       }
 
-      /* フッター内部コンテンツ（クリック可能 + 文字読みやすく） */
       footer > div {
          width: fit-content;
-         min-width: 596px;  /* あなたのいい感じの596px固定 */
+         min-width: 596px;
          max-width: 596px;
          margin-left: auto;
          margin-right: auto;
@@ -611,8 +610,8 @@
          background: rgba(240, 240, 240, 0);
          padding: 10px 20px;
          border-radius: 8px;
-         pointer-events: auto;  /* 文字部分だけクリック可能 */
-         color: #333;  /* 文字色を濃く（影の上でも見やすく） */
+         pointer-events: auto;
+         color: #333;
       }
 
       footer .policy-content {
@@ -623,10 +622,9 @@
          margin-right: auto;
          transition: all 0.3s ease;
          word-wrap: break-word;
-         background: transparent;  /* 本文背景透明（薄い背景はタイトルだけでもOK） */
+         background: transparent;
       }
 
-      /* モバイル対応 */
       @media (max-width: 768px) {
          footer {
             margin-top: -20px;
@@ -642,10 +640,11 @@
    <link rel="preconnect" href="https://fonts.googleapis.com">
    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+   <meta name="description" content="閃ｰセンｰは、表示された一文字を素早く打つだけのシンプルなタイピングゲームです。">
 </head>
 <body>
    <h1>閃ｰセンｰ</h1>
-   <div id="ui-guide">Enter/Space：開始</div>
+   <div id="ui-guide">Enter/Space：開始　R：ランキング</div>
    <div id="mode-stats-container">
       <div id="mode-select">
          <div class="mode-group focused" id="time-group">
@@ -1303,13 +1302,20 @@
                const allScores = await loadRanking();
 
                const currentModePrefix = `${selectedTime}秒 ${selectedDifficulty}`;
-               const filteredScores = allScores.filter(s => s.mode && s.mode.startsWith(currentModePrefix));
+               let filteredScores = allScores.filter(s => s.mode && s.mode.startsWith(currentModePrefix));
 
-               const top10 = filteredScores
-                  .sort((a, b) => b.score - a.score)
-                  .slice(0, 10);
+               // スコア降順でソート
+               let sortedScores = filteredScores.sort((a, b) => b.score - a.score);
 
-               let html = `<h2>ランキング（${selectedTime}秒 ${selectedDifficulty} 上位10位）</h2>`;
+               // リザルト画面（gameState === 'ended'）の場合は上位10位のみ、それ以外（トップ画面からの閲覧）は全件
+               let displayScores = sortedScores;
+               let titleSuffix = '（全記録）';
+               if (gameState === 'ended') {
+                  displayScores = sortedScores.slice(0, 10);
+                  titleSuffix = '（Top 10）';
+               }
+
+               let html = `<h2>${selectedTime}秒 ${selectedDifficulty} ${titleSuffix}</h2>`;
                html += '<table style="width: fit-content; margin: 20px auto; border-collapse: collapse; font-size: 18px;">';
                html += '<thead>';
                html += '<tr style="background-color: #f2f2f2;">';
@@ -1323,15 +1329,19 @@
                html += '</thead>';
                html += '<tbody>';
 
-               if (top10.length === 0) {
+               if (displayScores.length === 0) {
                   html += '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #666;">まだ登録がありません</td></tr>';
                } else {
-                  top10.forEach((s, index) => {
+                  let currentRank = 1;
+                  displayScores.forEach((s, i) => {
+                     if (i > 0 && s.score < displayScores[i - 1].score) {
+                        currentRank = i + 1;
+                     }
                      const layout = s.mode.split(' ').pop();
                      const rankColor = getGreenColor(s.rank || 'F');
                      const registerDate = new Date(s.timestamp).toLocaleDateString('ja-JP');
                      html += '<tr>';
-                     html += `<td style="padding: 10px 20px; text-align: center;">${index + 1}位</td>`;
+                     html += `<td style="padding: 10px 20px; text-align: center;">${currentRank}位</td>`;
                      html += `<td style="padding: 10px 20px; text-align: left;">${s.name}</td>`;
                      html += `<td style="padding: 10px 20px; text-align: right;">${s.score}点</td>`;
                      html += `<td style="padding: 10px 20px; text-align: center; color: ${rankColor}; font-weight: bold;">${s.rank || '-'}</td>`;
@@ -1352,6 +1362,79 @@
          currentDetailMode = 'ranking';
          updateActiveButtons();
          updateFooterVisibility();
+      }
+
+      function showAllModesRanking() {
+         const rankingContent = document.getElementById('ranking-content');
+         rankingContent.innerHTML = '<p>読み込み中...</p>';
+
+         (async () => {
+            const allScores = await loadRanking();
+
+            const modes = [
+               {time: '15秒', diff: 'Easy'},
+               {time: '15秒', diff: 'Normal'},
+               {time: '15秒', diff: 'Hard'},
+               {time: '30秒', diff: 'Easy'},
+               {time: '30秒', diff: 'Normal'},
+               {time: '30秒', diff: 'Hard'},
+               {time: '60秒', diff: 'Easy'},
+               {time: '60秒', diff: 'Normal'},
+               {time: '60秒', diff: 'Hard'}
+            ];
+
+            let html = '<h2 style="font-size: 32px; margin-bottom: 30px;">全モードランキング</h2>';
+
+            for (const mode of modes) {
+               const prefix = `${mode.time} ${mode.diff}`;
+               let filteredScores = allScores.filter(s => s.mode && s.mode.startsWith(prefix));
+
+               let sortedScores = filteredScores.sort((a, b) => b.score - a.score);
+
+               html += `<h3 style="font-size: 24px; margin: 40px 0 20px 0;">${prefix}</h3>`;
+               html += '<table style="width: fit-content; margin: 20px auto; border-collapse: collapse; font-size: 18px;">';
+               html += '<thead>';
+               html += '<tr style="background-color: #f2f2f2;">';
+               html += '<th style="padding: 10px 20px; text-align: center;">順位</th>';
+               html += '<th style="padding: 10px 20px; text-align: left;">名前</th>';
+               html += '<th style="padding: 10px 20px; text-align: right;">スコア</th>';
+               html += '<th style="padding: 10px 20px; text-align: center;">ランク</th>';
+               html += '<th style="padding: 10px 20px; text-align: center;">レイアウト</th>';
+               html += '<th style="padding: 10px 20px; text-align: center;">登録日</th>';
+               html += '</tr>';
+               html += '</thead>';
+               html += '<tbody>';
+
+               if (sortedScores.length === 0) {
+                  html += '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #666;">まだ登録がありません</td></tr>';
+               } else {
+                  let currentRank = 1;
+                  sortedScores.forEach((s, i) => {
+                     if (i > 0 && s.score < sortedScores[i - 1].score) {
+                        currentRank = i + 1;
+                     }
+                     const layout = s.mode.split(' ').pop();
+                     const rankColor = getGreenColor(s.rank || 'F');
+                     const registerDate = new Date(s.timestamp).toLocaleDateString('ja-JP');
+                     html += '<tr>';
+                     html += `<td style="padding: 10px 20px; text-align: center;">${currentRank}位</td>`;
+                     html += `<td style="padding: 10px 20px; text-align: left;">${s.name}</td>`;
+                     html += `<td style="padding: 10px 20px; text-align: right;">${s.score}点</td>`;
+                     html += `<td style="padding: 10px 20px; text-align: center; color: ${rankColor}; font-weight: bold;">${s.rank || '-'}</td>`;
+                     html += `<td style="padding: 10px 20px; text-align: center;">${layout}</td>`;
+                     html += `<td style="padding: 10px 20px; text-align: center;">${registerDate}</td>`;
+                     html += '</tr>';
+                  });
+               }
+
+               html += '</tbody>';
+               html += '</table>';
+            }
+
+            rankingContent.innerHTML = html;
+         })();
+
+         resetDetailContainerWidth();
       }
 
       const mt = new MersenneTwister();
@@ -1379,6 +1462,7 @@
       let selectedLayout = 'US';
       let timerId = null;
       let countdownInterval = null;
+      let countdownTimeout = null;
       let gameState = 'ready';
       let charStartTime = null;
       let isInputLocked = false;
@@ -1765,50 +1849,50 @@
       }
 
       function startCountdown() {
-            gameState = 'countdown';
-            updateFooterVisibility();
-            setTargetBox(true);
-            
-            targetEl.textContent = '';
-            targetEl.style.color = '#333';
+         gameState = 'countdown';
+         updateFooterVisibility();
+         setTargetBox(true);
+         
+         targetEl.textContent = '';
+         targetEl.style.color = '#333';
 
-            messageEl.textContent = 'Ready?';
-            messageEl.style.color = '#333';
+         messageEl.textContent = 'Ready?';
+         messageEl.style.color = '#333';
 
-            setTimeout(() => {
-                  let count = 3;
+         countdownTimeout = setTimeout(() => {
+            let count = 3;
 
+            messageEl.textContent = count;
+
+            countdownInterval = setInterval(() => {
+               count--;
+
+               if (count > 0) {
                   messageEl.textContent = count;
+               } else {
+                  clearInterval(countdownInterval);
 
-                  countdownInterval = setInterval(() => {
-                        count--;
+                  gameState = 'playing';
+                  updateFooterVisibility();
 
-                        if (count > 0) {
-                              messageEl.textContent = count;
-                        } else {
-                              clearInterval(countdownInterval);
+                  showNewChar();
 
-                              gameState = 'playing';
-                              updateFooterVisibility();
+                  messageEl.textContent = 'Go!';
+                  messageEl.style.color = '#333';
 
-                              showNewChar();
+                  timeLeft = selectedTime;
+                  timerDisplay.textContent = timeLeft;
 
-                              messageEl.textContent = 'Go!';
-                              messageEl.style.color = '#333';
-
-                              timeLeft = selectedTime;
-                              timerDisplay.textContent = timeLeft;
-
-                              setTimeout(() => {
-                                    if (gameState !== 'playing') return;
-                                    messageEl.textContent = '';
-                                    messageEl.style.color = '#333';
-                              }, 1000);
-
-                              startTimer();
-                        }
+                  setTimeout(() => {
+                     if (gameState !== 'playing') return;
+                     messageEl.textContent = '';
+                     messageEl.style.color = '#333';
                   }, 1000);
+
+                  startTimer();
+               }
             }, 1000);
+         }, 1000);
       }
 
       function startTimer() {
@@ -1830,6 +1914,15 @@
       }
 
       function startGame() {
+         clearInterval(timerId);
+         clearInterval(countdownInterval);
+         if (revealTimer) {
+            clearTimeout(revealTimer);
+            revealTimer = null;
+         }
+
+         timerId = null;
+         countdownInterval = null;
          selectedTime = parseInt(timeOptions[currentItemIndex[0]].replace('秒', '')) || 60;
          selectedDifficulty = difficultyOptions[currentItemIndex[1]];
          selectedLayout = layoutOptions[currentItemIndex[2]];
@@ -1889,7 +1982,7 @@
          let rankColor = getGreenColor(finalRank);
 
          const tweetText = 
-            `閃ｰセンｰ をプレイしました\n` +
+            `閃ｰセンｰをプレイしました\n` +
             `モード：${selectedTime}秒 ${selectedDifficulty} ${selectedLayout}\n` +
             `総合スコア：${score}点\n` +
             `総合ランク：${finalRank}\n` +
@@ -1929,6 +2022,7 @@
 
          let isNewRecord = false;
          let existingScore = null;
+         let myRank = null;
 
          try {
             const uid = window.firebase.auth.currentUser ? window.firebase.auth.currentUser.uid : 'guest_' + Date.now();
@@ -1951,12 +2045,46 @@
             isNewRecord = true;
          }
 
+         if (isNewRecord) {
+            try {
+               const allScores = await loadRanking();
+               const currentModePrefix = `${selectedTime}秒 ${selectedDifficulty}`;
+               let modeScores = allScores.filter(s => s.mode && s.mode.startsWith(currentModePrefix));
+
+               const uid = window.firebase.auth.currentUser ? window.firebase.auth.currentUser.uid : 'guest_' + Date.now();
+
+               modeScores = modeScores.filter(s => !(s.uid && s.uid.replace(/[.$#[\]/]/g, '_') === uid.replace(/[.$#[\]/]/g, '_')));
+
+               const hypotheticalList = [...modeScores, { score: score }];
+
+               hypotheticalList.sort((a, b) => b.score - a.score);
+
+               let currentRank = 1;
+               hypotheticalList.forEach((entry, i) => {
+                  if (i > 0 && entry.score < hypotheticalList[i - 1].score) {
+                     currentRank = i + 1;
+                  }
+                  if (entry.score === score && myRank === null) {
+                     myRank = currentRank;
+                  }
+               });
+            } catch (err) {
+               console.error("ランキング順位計算失敗:", err);
+            }
+         }
+
          let registeredName = null;
 
          if (isNewRecord) {
-            const promptMessage = existingScore === null 
-               ? "新記録樹立！\nランキング登録名（20文字以内・キャンセルで登録なし）"
-               : `新記録樹立！（従来:${existingScore}点 → ${score}点）\nランキング登録名（20文字以内・キャンセルで登録なし）`;
+            const prefix = (myRank === 1) ? '新記録樹立！' : '自己新記録樹立！';
+            let promptMessage = `${prefix}\n`;
+
+            if (myRank !== null) {
+               promptMessage += `${myRank}位にランクインします！\n`;
+            }
+
+            promptMessage += `モード：${selectedTime}秒 ${selectedDifficulty}\n`;
+            promptMessage += `ランキング登録名（20文字以内・キャンセルで登録なし）`;
 
             let name = prompt(promptMessage, "Anonymous");
             if (name !== null) {
@@ -1974,13 +2102,30 @@
       }
 
       function resetToInitial() {
+         const policy = document.querySelector('.policy-content');
+         if (policy) policy.style.display = 'none';
+
          clearInterval(timerId);
          clearInterval(countdownInterval);
+         if (revealTimer) {
+            clearTimeout(revealTimer);
+            revealTimer = null;
+         }
+         if (countdownTimeout) {
+            clearTimeout(countdownTimeout);
+            countdownTimeout = null;
+         }
+
+         timerId = null;
+         countdownInterval = null;
+
          gameState = 'ready';
          updateFooterVisibility();
          setTargetBox(false);
          resultEl.style.display = 'none';
          modeSelectArea.style.display = 'flex';
+         document.getElementById('mode-stats-container').style.display = 'flex';
+
          statsEl.style.display = 'none';
          timerDisplay.style.display = 'block';
          timerDisplay.style.color = '#d35400';
@@ -1993,7 +2138,8 @@
          messageEl.textContent = 'ｰセンｰ';
          messageEl.style.height = '60px';
          messageEl.style.margin = '0 0 30px 0';
-         uiGuide.textContent = 'Enter/Space：開始';
+         messageEl.style.display = 'block';
+         uiGuide.textContent = 'Enter/Space：開始　R：ランキング';
          correctSpan.textContent = 0;
          missSpan.textContent = 0;
          scoreSpan.textContent = 0;
@@ -2003,6 +2149,10 @@
          clearHighlights();
          document.body.classList.remove('result-mode');
          updateSelection();
+
+         isInputLocked = false;
+         charStartTime = null;
+         currentChar = '';
       }
 
       function syncFooterWidth() {
@@ -2033,9 +2183,6 @@
          const footer = document.querySelector('footer');
          let showFooter = false;
          if (gameState === 'ready') {
-            showFooter = true;
-         }
-         if (gameState === 'ended' && currentDetailMode === 'ranking') {
             showFooter = true;
          }
 
@@ -2121,16 +2268,48 @@
       });
 
       document.addEventListener('keydown', (e) => {
+         if (gameState === 'ready' && e.key.toUpperCase() === 'R') {
+            gameState = 'ranking';
+            updateFooterVisibility();
 
-      if (e.key.toUpperCase() === 'P') {
-         if (gameState !== 'playing') {
+            resultEl.style.display = 'block';
+            resultContent.style.display = 'none';
+            document.getElementById('detail-toggle').style.display = 'none';
+            document.getElementById('detail-container').style.display = 'block';
+
+            document.getElementById('detail-graph').style.display = 'none';
+            document.getElementById('detail-table-container').style.display = 'none';
+            document.getElementById('detail-stats').style.display = 'none';
+            document.getElementById('detail-ranking').style.display = 'block';
+
+            modeSelectArea.style.display = 'none';
+            document.getElementById('mode-stats-container').style.display = 'none';
+
+            statsEl.style.display = 'none';
+            timerDisplay.style.display = 'none';
+            targetEl.style.display = 'none';
+            messageEl.style.display = 'none';
+
+            usKeyboardGuide.style.display = 'none';
+            jisKeyboardGuide.style.display = 'none';
+
+            uiGuide.textContent = 'Esc：トップに戻る';
+            document.body.classList.add('result-mode');
+
+            showAllModesRanking();
+            return;
+         }
+
+         if (gameState === 'ready' && e.key.toUpperCase() === 'P') {
             const policy = document.querySelector('.policy-content');
-               if (policy) {
-                  policy.style.display = (policy.style.display === 'none' || policy.style.display === '') ? 'block' : 'none';
-                  }
-                  return;
+            if (policy) {
+               policy.style.display = (policy.style.display === 'none' || policy.style.display === '') ? 'block' : 'none';
+               if (policy.style.display === 'block') {
+                  policy.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                }
             }
+            return;
+         }
             
          if (e.key === 'Escape') {
             if (gameState !== 'ready') {
@@ -2374,7 +2553,7 @@
    </script>
    <footer>
       <div>
-         <div style="cursor: pointer; font-size: 16px; text-align: left; color: #666" onclick="this.parentNode.parentNode.querySelector('.policy-content').style.display = (this.parentNode.parentNode.querySelector('.policy-content').style.display === 'none' || this.parentNode.parentNode.querySelector('.policy-content').style.display === '') ? 'block' : 'none';">
+         <div style="cursor: pointer; font-size: 16px; text-align: left; color: #666" onclick="const policy = this.parentNode.parentNode.querySelector('.policy-content'); policy.style.display = (policy.style.display === 'none' || policy.style.display === '') ? 'block' : 'none'; if (policy.style.display === 'block') { policy.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }">
             Privacy Policy (P)
          </div>
          <div class="policy-content" style="display: none; margin-top: 20px; text-align: left; color: #666; line-height: 1.6;">
@@ -2384,8 +2563,11 @@
             データはFirebase（Google LLC）で管理されており、Googleのプライバシーポリシーが適用されます。<br>
             ブラウザのキャッシュクリア等で匿名IDが変わる場合、過去記録が引き継がれない可能性があります。</p>
             <p>ゲームプレイのスクリーンショット、記録画像、プレイ動画のSNS投稿・アップロード・配信は自由です。</p>
-            <p>制作者: TK Lab. (https://x.com/TK_Lab_)<br>
-            ご質問・ご要望はXのDMやリプライまでご連絡ください。</p>
+            <p>制作者: TK Lab.（<a href="https://x.com/TK_Lab_" target="_blank" rel="noopener noreferrer" style="color: #1DA1F2; text-decoration: underline;">@TK_Lab_</a>）<br>
+            ご質問・ご要望はTwitter（現𝕏）のDMやリプライまでご連絡ください。</p>
+           <p style="margin-top: 10px; font-size: 14px;">
+               Version 1.2.0 (2026-01-25)
+            </p>
          </div>
       </div>
    </footer>

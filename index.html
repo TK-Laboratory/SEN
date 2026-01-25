@@ -31,7 +31,9 @@
       ・全てのランキング表示を実装
     - 2026-01-25 (v1.2.1)
       ・セキュリティ対応
--->
+    - 2026-01-25 (v1.2.2)
+      ・バグ修正
+--->
 <html lang="ja">
 <head>
    <meta charset="UTF-8">
@@ -2468,7 +2470,7 @@
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
       import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
       import { getDatabase, ref, set, get, query, orderByChild, limitToFirst } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
-
+      import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app-check.js";
       const firebaseConfig = {
         apiKey: "AIzaSyAyyyQ0D0Lc2zfIRUm97Ztwz1gfbxeVP50",
         authDomain: "sen-ranking.firebaseapp.com",
@@ -2573,11 +2575,12 @@
             <p>制作者: TK Lab.（<a href="https://x.com/TK_Lab_" target="_blank" rel="noopener noreferrer" style="color: #1DA1F2; text-decoration: underline;">@TK_Lab_</a>）<br>
             ご質問・ご要望はTwitter（現𝕏）のDMやリプライまでご連絡ください。</p>
            <p style="margin-top: 10px; font-size: 14px;">
-               Version 1.2.1 (2026-01-25)
+               Version 1.2.2 (2026-01-25)
             </p>
          </div>
       </div>
    </footer>
 </body>
 </html>
+
 

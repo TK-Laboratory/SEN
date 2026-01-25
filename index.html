@@ -29,6 +29,8 @@
       ・スクロールバーの挙動を安定化
     - 2026-01-25 (v1.2.0)
       ・全てのランキング表示を実装
+    - 2026-01-25 (v1.2.1)
+      ・セキュリティ対応
 -->
 <html lang="ja">
 <head>
@@ -2479,6 +2481,11 @@
 
       console.log("Firebase初期化開始");
       const app = initializeApp(firebaseConfig);
+      initializeAppCheck(app, {
+         provider: new ReCaptchaV3Provider('6LeipVUsAAAAAPY37lhC-J4hs2kdYtMxIxNcjfXq'),  // ← reCAPTCHA登録時に出たSite Key！
+         isTokenAutoRefreshEnabled: true
+      });
+
       const auth = getAuth(app);
       window.auth = auth;
       const db = getDatabase(app);
@@ -2566,10 +2573,11 @@
             <p>制作者: TK Lab.（<a href="https://x.com/TK_Lab_" target="_blank" rel="noopener noreferrer" style="color: #1DA1F2; text-decoration: underline;">@TK_Lab_</a>）<br>
             ご質問・ご要望はTwitter（現𝕏）のDMやリプライまでご連絡ください。</p>
            <p style="margin-top: 10px; font-size: 14px;">
-               Version 1.2.0 (2026-01-25)
+               Version 1.2.1 (2026-01-25)
             </p>
          </div>
       </div>
    </footer>
 </body>
 </html>
+

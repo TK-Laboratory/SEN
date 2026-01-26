@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <!-- 
   閃ｰセンｰ (SEN)
-  Version: 1.1.3 (更新日: 2026-01-20)
+  Version: 1.2.3 (更新日: 2026-01-27)
   Author: TK Lab. (https://x.com/TK_Lab_)
-  Description: 表示された一文字を打つだけのタイピングゲーム。
+  Description: 表示された一文字を打つだけのシンプルなタイピングゲーム。
   License: このコードは個人利用・改変・再配布自由ですが、商用利用はご遠慮ください。
            クレジット表記を削除しないでください。
   Credits:
@@ -33,6 +33,8 @@
       ・セキュリティ対応
     - 2026-01-25 (v1.2.2)
       ・バグ修正
+    - 2026-01-27 (v1.2.3)
+      ・記録更新時の登録名の初期値を前回登録名に変更
 --->
 <html lang="ja">
 <head>
@@ -644,7 +646,7 @@
    <link rel="preconnect" href="https://fonts.googleapis.com">
    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-   <meta name="description" content="閃ｰセンｰは、表示された一文字を素早く打つだけのシンプルなタイピングゲームです。">
+   <meta name="description" content="閃ｰセンｰは、表示された一文字を打つだけのシンプルなタイピングゲームです。">
 </head>
 <body>
    <h1>閃ｰセンｰ</h1>
@@ -919,7 +921,15 @@
             return this.genrand_int32() * (1.0 / 4294967296.0);
          }
       }
-
+      function escapeHtml(text) {
+         if (typeof text !== 'string') return '';
+         return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+      }
       const shiftPairs = {
          JIS: {
             '1': '!',
@@ -1346,7 +1356,7 @@
                      const registerDate = new Date(s.timestamp).toLocaleDateString('ja-JP');
                      html += '<tr>';
                      html += `<td style="padding: 10px 20px; text-align: center;">${currentRank}位</td>`;
-                     html += `<td style="padding: 10px 20px; text-align: left;">${s.name}</td>`;
+                     html += `<td style="padding: 10px 20px; text-align: left;">${escapeHtml(s.name)}</td>`;
                      html += `<td style="padding: 10px 20px; text-align: right;">${s.score}点</td>`;
                      html += `<td style="padding: 10px 20px; text-align: center; color: ${rankColor}; font-weight: bold;">${s.rank || '-'}</td>`;
                      html += `<td style="padding: 10px 20px; text-align: center;">${layout}</td>`;
@@ -1422,7 +1432,7 @@
                      const registerDate = new Date(s.timestamp).toLocaleDateString('ja-JP');
                      html += '<tr>';
                      html += `<td style="padding: 10px 20px; text-align: center;">${currentRank}位</td>`;
-                     html += `<td style="padding: 10px 20px; text-align: left;">${s.name}</td>`;
+                     html += `<td style="padding: 10px 20px; text-align: left;">${escapeHtml(s.name)}</td>`;
                      html += `<td style="padding: 10px 20px; text-align: right;">${s.score}点</td>`;
                      html += `<td style="padding: 10px 20px; text-align: center; color: ${rankColor}; font-weight: bold;">${s.rank || '-'}</td>`;
                      html += `<td style="padding: 10px 20px; text-align: center;">${layout}</td>`;
@@ -2026,6 +2036,7 @@
 
          let isNewRecord = false;
          let existingScore = null;
+         let existingName = "Anonymous";
          let myRank = null;
 
          try {
@@ -2037,7 +2048,9 @@
 
             const snapshot = await window.firebase.get(userRef);
             if (snapshot.exists()) {
-               existingScore = snapshot.val().score;
+               const data = snapshot.val();
+               existingScore = data.score;
+               existingName = data.name || "Anonymous";
                if (score > existingScore) {
                   isNewRecord = true;
                }
@@ -2090,7 +2103,7 @@
             promptMessage += `モード：${selectedTime}秒 ${selectedDifficulty}\n`;
             promptMessage += `ランキング登録名（20文字以内・キャンセルで登録なし）`;
 
-            let name = prompt(promptMessage, "Anonymous");
+            let name = prompt(promptMessage, existingName);
             if (name !== null) {
                name = name.trim();
                if (name === "") name = "Anonymous";
@@ -2575,12 +2588,10 @@
             <p>制作者: TK Lab.（<a href="https://x.com/TK_Lab_" target="_blank" rel="noopener noreferrer" style="color: #1DA1F2; text-decoration: underline;">@TK_Lab_</a>）<br>
             ご質問・ご要望はTwitter（現𝕏）のDMやリプライまでご連絡ください。</p>
            <p style="margin-top: 10px; font-size: 14px;">
-               Version 1.2.2 (2026-01-25)
+               Version 1.2.3 (2026-01-27)
             </p>
          </div>
       </div>
    </footer>
 </body>
 </html>
-
-

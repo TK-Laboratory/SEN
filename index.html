@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- 
   閃ｰセンｰ (SEN)
-  Version: 1.2.3 (更新日: 2026-01-27)
+  Version: 1.2.4 (更新日: 2026-01-30)
   Author: TK Lab. (https://x.com/TK_Lab_)
   Description: 表示された一文字を打つだけのシンプルなタイピングゲーム。
   License: このコードは個人利用・改変・再配布自由ですが、商用利用はご遠慮ください。
@@ -35,6 +35,8 @@
       ・バグ修正
     - 2026-01-27 (v1.2.3)
       ・記録更新時の登録名の初期値を前回登録名に変更
+    - 2026-01-30 (v1.2.4)
+      ・リザルト画面でスコアが表示されないことがある不具合を修正
 --->
 <html lang="ja">
 <head>
@@ -2167,6 +2169,11 @@
          document.body.classList.remove('result-mode');
          updateSelection();
 
+         const resultContent = document.getElementById('result-content');
+         if (resultContent) resultContent.style.display = '';
+         const detailToggle = document.getElementById('detail-toggle');
+         if (detailToggle) detailToggle.style.display = '';
+         
          isInputLocked = false;
          charStartTime = null;
          currentChar = '';
@@ -2588,7 +2595,7 @@
             <p>制作者: TK Lab.（<a href="https://x.com/TK_Lab_" target="_blank" rel="noopener noreferrer" style="color: #1DA1F2; text-decoration: underline;">@TK_Lab_</a>）<br>
             ご質問・ご要望はTwitter（現𝕏）のDMやリプライまでご連絡ください。</p>
            <p style="margin-top: 10px; font-size: 14px;">
-               Version 1.2.3 (2026-01-27)
+               Version 1.2.4 (2026-01-30)
             </p>
          </div>
       </div>
